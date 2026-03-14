@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WinZone Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{--bg:#080810;--s:#0f0f1a;--s2:#161625;--gold:#ffd700;--green:#00e676;--red:#ff4444;--blue:#2196f3;--orange:#ff9800;--muted:#555;--text:#ddd;}
+body{background:var(--bg);color:var(--text);font-family:'Rajdhani',sans-serif;min-height:100vh;}
+.login{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:999;flex-direction:column;}
+.login-box{background:var(--s);border:1px solid #ffd70033;border-radius:16px;padding:28px 22px;width:290px;text-align:center;}
+.login-title{font-family:'Orbitron',sans-serif;font-size:16px;color:var(--gold);margin-bottom:4px;letter-spacing:2px;}
+.login-sub{font-size:11px;color:var(--muted);margin-bottom:20px;}
+.login-inp{width:100%;background:var(--s2);border:1px solid #333;border-radius:9px;color:white;font-family:'Orbitron',sans-serif;font-size:18px;padding:11px;text-align:center;letter-spacing:4px;margin-bottom:12px;}
+.login-inp:focus{outline:none;border-color:var(--gold);}
+.login-btn{width:100%;padding:12px;background:linear-gradient(135deg,var(--gold),var(--orange));border:none;border-radius:9px;color:#000;font-family:'Orbitron',sans-serif;font-size:13px;font-weight:700;cursor:pointer;}
+.login-err{color:var(--red);font-size:11px;margin-top:8px;}
+.admin{display:none;}
+.admin-header{background:var(--s);padding:10px 14px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #ffd70022;}
+.admin-title{font-family:'Orbitron',sans-serif;font-size:16px;color:var(--gold);letter-spacing:2px;}
+.admin-badge{background:#ffd70011;border:1px solid #ffd70033;border-radius:20px;padding:4px 12px;font-size:10px;color:var(--gold);font-family:'Orbitron',sans-serif;}
+.admin-tabs{display:flex;background:var(--s);border-bottom:1px solid #111;overflow-x:auto;}
+.admin-tab{flex-shrink:0;padding:10px 12px;text-align:center;font-family:'Orbitron',sans-serif;font-size:10px;color:var(--muted);cursor:pointer;letter-spacing:1px;transition:all 0.2s;border-bottom:2px solid transparent;white-space:nowrap;}
+.admin-tab.active{color:var(--gold);border-bottom-color:var(--gold);}
+.admin-content{padding:12px;}
+.page{display:none;}
+.page.active{display:block;}
+.card{background:var(--s);border-radius:12px;padding:14px;margin-bottom:12px;border:1px solid #1a1a2e;}
+.card-title{font-family:'Orbitron',sans-serif;font-size:10px;color:var(--muted);letter-spacing:1px;margin-bottom:12px;}
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;}
+.stat-box{background:var(--s);border-radius:11px;padding:14px;text-align:center;border:1px solid #1a1a2e;}
+.stat-val{font-family:'Orbitron',sans-serif;font-size:22px;font-weight:700;}
+.stat-lbl{font-size:10px;color:var(--muted);margin-top:3px;}
+.result-presets{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:12px;}
+.preset{padding:9px 4px;border-radius:8px;border:1px solid #333;background:var(--s2);font-family:'Orbitron',sans-serif;font-size:12px;font-weight:700;cursor:pointer;text-align:center;transition:all 0.2s;}
+.preset:hover{border-color:var(--gold);color:var(--gold);}
+.preset.sel{border-color:var(--gold);color:var(--gold);background:#1a1a10;}
+.preset.red{color:var(--red);border-color:#ff444433;}
+.preset.red:hover,.preset.red.sel{background:#1a0a0a;border-color:var(--red);}
+.preset.grn{color:var(--green);border-color:#00e67633;}
+.preset.grn:hover,.preset.grn.sel{background:#0a1a0a;border-color:var(--green);}
+.preset.blu{color:var(--blue);border-color:#2196f333;}
+.preset.blu:hover,.preset.blu.sel{background:#0a0a1a;border-color:var(--blue);}
+.custom-row{display:flex;gap:8px;align-items:center;margin-bottom:10px;}
+.custom-inp{flex:1;background:var(--s2);border:1px solid #333;border-radius:8px;color:white;font-family:'Orbitron',sans-serif;font-size:14px;padding:9px 10px;text-align:center;}
+.custom-inp:focus{outline:none;border-color:var(--gold);}
+.set-btn{padding:9px 16px;background:linear-gradient(135deg,var(--gold),var(--orange));border:none;border-radius:8px;color:#000;font-family:'Orbitron',sans-serif;font-size:11px;font-weight:700;cursor:pointer;}
+.auto-btn{padding:9px 14px;background:var(--s2);border:1px solid #444;border-radius:8px;color:#aaa;font-family:'Orbitron',sans-serif;font-size:11px;cursor:pointer;}
+.status-bar{background:var(--s2);border-radius:8px;padding:10px 12px;display:flex;justify-content:space-between;align-items:center;}
+.status-txt{font-size:12px;color:var(--muted);}
+.status-val{font-family:'Orbitron',sans-serif;font-size:13px;color:var(--gold);}
+.badge{font-size:10px;padding:3px 8px;border-radius:10px;font-weight:600;}
+.b-pending{background:#ff980022;color:var(--orange);border:1px solid #ff980044;}
+.b-done{background:#00e67622;color:var(--green);border:1px solid #00e67644;}
+.b-rejected{background:#ff444422;color:var(--red);border:1px solid #ff444444;}
+.approve-btn{padding:4px 10px;background:var(--green);border:none;border-radius:6px;color:#000;font-size:10px;font-weight:700;cursor:pointer;}
+.reject-btn{padding:4px 10px;background:var(--red);border:none;border-radius:6px;color:white;font-size:10px;font-weight:700;cursor:pointer;}
+.settings-label{font-size:12px;color:var(--muted);margin-bottom:5px;display:block;}
+.settings-inp{width:100%;background:var(--s2);border:1px solid #333;border-radius:9px;color:white;font-family:'Rajdhani',sans-serif;font-size:14px;padding:10px 12px;margin-bottom:12px;}
+.settings-inp:focus{outline:none;border-color:var(--gold);}
+.save-btn{width:100%;padding:12px;background:linear-gradient(135deg,var(--gold),var(--orange));border:none;border-radius:9px;color:#000;font-family:'Orbitron',sans-serif;font-size:12px;font-weight:700;cursor:pointer;}
+.toast{position:fixed;top:70px;left:50%;transform:translateX(-50%) translateY(-20px);background:var(--s2);border:1px solid #333;padding:9px 18px;border-radius:9px;font-family:'Orbitron',sans-serif;font-size:12px;z-index:300;opacity:0;transition:all 0.3s;white-space:nowrap;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+.toast.win{border-color:var(--green);color:var(--green);}
+.toast.lose{border-color:var(--red);color:var(--red);}
+.toast.info{border-color:var(--gold);color:var(--gold);}
+</style>
+</head>
+<body>
+
+<div class="login" id="loginScreen">
+  <div class="login-box">
+    <div class="login-title">🔐 ADMIN PANEL</div>
+    <div class="login-sub">WinZone Control Center</div>
+    <input class="login-inp" id="adminPass" type="password" placeholder="••••••" maxlength="20">
+    <button class="login-btn" onclick="adminLogin()">ACCESS</button>
+    <div class="login-err" id="loginErr"></div>
+  </div>
+</div>
+
+<div class="admin" id="adminPanel">
+  <div class="admin-header">
+    <div class="admin-title">⚙️ WinZone Admin</div>
+    <div class="admin-badge">ADMIN</div>
+  </div>
+  <div class="admin-tabs">
+    <div class="admin-tab active" onclick="switchTab('dashboard')">📊 DASH</div>
+    <div class="admin-tab" onclick="switchTab('result')">🎮 RESULT</div>
+    <div class="admin-tab" onclick="switchTab('deposits')">💰 DEP</div>
+    <div class="admin-tab" onclick="switchTab('withdrawals')">⬆️ WITH</div>
+    <div class="admin-tab" onclick="switchTab('users')">👥 USERS</div>
+    <div class="admin-tab" onclick="switchTab('settings')">⚙️ SET</div>
+  </div>
+  <div class="admin-content">
+
+    <div class="page active" id="tab-dashboard">
+      <div class="stats-grid">
+        <div class="stat-box"><div class="stat-val" style="color:var(--gold)" id="st-users">0</div><div class="stat-lbl">Total Users</div></div>
+        <div class="stat-box"><div class="stat-val" style="color:var(--green)" id="st-coins">0</div><div class="stat-lbl">Total Coins</div></div>
+        <div class="stat-box"><div class="stat-val" style="color:var(--blue)" id="st-dep">0</div><div class="stat-lbl">Pending Deposits</div></div>
+        <div class="stat-box"><div class="stat-val" style="color:var(--orange)" id="st-with">0</div><div class="stat-lbl">Pending Withdrawals</div></div>
+      </div>
+      <div class="card">
+        <div class="card-title">📋 RECENT TRANSACTIONS</div>
+        <div id="recentActivity"><div style="text-align:center;color:var(--muted);padding:15px;font-size:12px;">Loading...</div></div>
+      </div>
+    </div>
+
+    <div class="page" id="tab-result">
+      <div class="card" style="border-color:#ffd70033">
+        <div class="card-title">🎮 SET NEXT ROUND CRASH POINT</div>
+        <div class="result-presets">
+          <div class="preset red" onclick="selectPreset(1.2)">1.2x</div>
+          <div class="preset red" onclick="selectPreset(1.5)">1.5x</div>
+          <div class="preset" onclick="selectPreset(2.0)">2x</div>
+          <div class="preset" onclick="selectPreset(3.0)">3x</div>
+          <div class="preset grn" onclick="selectPreset(5.0)">5x</div>
+          <div class="preset grn" onclick="selectPreset(10.0)">10x</div>
+          <div class="preset blu" onclick="selectPreset(25.0)">25x</div>
+          <div class="preset blu" onclick="selectPreset(50.0)">50x</div>
+        </div>
+        <div class="custom-row">
+          <input class="custom-inp" id="customCrashVal" type="number" min="1.01" step="0.01" placeholder="Custom value">
+          <button class="set-btn" onclick="setCrash()">SET</button>
+          <button class="auto-btn" onclick="setAuto()">AUTO</button>
+        </div>
+        <div class="status-bar">
+          <span class="status-txt">Next Round:</span>
+          <span class="status-val" id="crashStatus">🎲 AUTO</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="page" id="tab-deposits">
+      <div class="card">
+        <div class="card-title">💰 DEPOSIT REQUESTS</div>
+        <div id="depositList"><div style="text-align:center;color:var(--muted);font-size:12px;padding:15px;">Loading...</div></div>
+      </div>
+    </div>
+
+    <div class="page" id="tab-withdrawals">
+      <div class="card">
+        <div class="card-title">⬆️ WITHDRAWAL REQUESTS</div>
+        <div id="withdrawList"><div style="text-align:center;color:var(--muted);font-size:12px;padding:15px;">Loading...</div></div>
+      </div>
+    </div>
+
+    <div class="page" id="tab-users">
+      <div class="card">
+        <div class="card-title">👥 ALL USERS</div>
+        <div id="usersList"><div style="text-align:center;color:var(--muted);font-size:12px;padding:15px;">Loading...</div></div>
+      </div>
+    </div>
+
+    <div class="page" id="tab-settings">
+      <div class="card">
+        <div class="card-title">⚙️ PAYMENT SETTINGS</div>
+        <label class="settings-label">Your UPI ID</label>
+        <input class="settings-inp" id="settingsUPI" placeholder="yourname@upi">
+        <label class="settings-label">Account Holder Name</label>
+        <input class="settings-inp" id="settingsName" placeholder="Your name">
+        <button class="save-btn" onclick="saveSettings()">SAVE SETTINGS</button>
+      </div>
+      <div class="card" style="border-color:#ff444433;margin-top:12px;">
+        <div class="card-title">🔐 CHANGE ADMIN PASSWORD</div>
+        <label class="settings-label">New Password</label>
+        <input class="settings-inp" id="newPass" type="password" placeholder="New password">
+        <button class="save-btn" style="background:linear-gradient(135deg,#ff4444,#cc2222);color:white;" onclick="changePass()">CHANGE PASSWORD</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyCS0JMB5ET0q9L5aGkpLqb4xbGtUyoBr-g",
+  authDomain: "winzone-e3798.firebaseapp.com",
+  projectId: "winzone-e3798",
+  storageBucket: "winzone-e3798.firebasestorage.app",
+  messagingSenderId: "169999192210",
+  appId: "1:169999192210:web:cc6c7d40ccf3ad7faf964b"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+const ADMIN_PASS = 'admin123';
+
+function adminLogin(){
+  const p = document.getElementById('adminPass').value;
+  // Check from Firestore settings
+  db.collection('settings').doc('admin').get().then(snap => {
+    const storedPass = (snap.exists && snap.data().password) ? snap.data().password : ADMIN_PASS;
+    if(p === storedPass){
+      document.getElementById('loginScreen').style.display='none';
+      document.getElementById('adminPanel').style.display='block';
+      loadAll();
+    } else {
+      document.getElementById('loginErr').textContent='Wrong password!';
+      document.getElementById('adminPass').value='';
+    }
+  });
+}
+
+document.getElementById('adminPass').addEventListener('keydown',e=>{ if(e.key==='Enter') adminLogin(); });
+
+function switchTab(t){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.admin-tab').forEach(tab=>tab.classList.remove('active'));
+  document.getElementById('tab-'+t).classList.add('active');
+  const tabs=['dashboard','result','deposits','withdrawals','users','settings'];
+  document.querySelectorAll('.admin-tab')[tabs.indexOf(t)].classList.add('active');
+  loadAll();
+}
+
+function loadAll(){ loadDashboard(); loadDeposits(); loadWithdrawals(); loadUsers(); loadSettings(); }
+
+async function loadDashboard(){
+  const [usersSnap, txnsSnap] = await Promise.all([
+    db.collection('users').get(),
+    db.collection('transactions').orderBy('createdAt','desc').limit(20).get()
+  ]);
+  const users = usersSnap.docs.map(d=>d.data());
+  const txns = txnsSnap.docs.map(d=>({id:d.id,...d.data()}));
+  const pendDep = txns.filter(t=>t.type==='deposit'&&t.status==='pending').length;
+  const pendWith = txns.filter(t=>t.type==='withdraw'&&t.status==='pending').length;
+  const totalCoins = users.reduce((a,u)=>a+(u.coins||0),0);
+  document.getElementById('st-users').textContent = users.length;
+  document.getElementById('st-coins').textContent = totalCoins.toLocaleString();
+  document.getElementById('st-dep').textContent = pendDep;
+  document.getElementById('st-with').textContent = pendWith;
+  const el = document.getElementById('recentActivity');
+  if(!txns.length){ el.innerHTML='<div style="text-align:center;color:var(--muted);padding:15px;font-size:12px;">No activity</div>'; return; }
+  el.innerHTML = txns.slice(0,5).map(t=>`
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:var(--s2);border-radius:8px;margin-bottom:5px;">
+      <div><div style="font-size:12px;font-weight:600;">${t.email||t.user} — ${t.type}</div><div style="font-size:10px;color:var(--muted);">${t.date}</div></div>
+      <div style="text-align:right;"><div style="font-family:'Orbitron',sans-serif;font-size:13px;color:${t.type==='deposit'?'var(--green)':'var(--orange)'};">${t.amount}🪙</div><span class="badge b-${t.status}">${t.status.toUpperCase()}</span></div>
+    </div>`).join('');
+}
+
+async function selectPreset(val){
+  document.querySelectorAll('.preset').forEach(p=>p.classList.remove('sel'));
+  event.target.classList.add('sel');
+  document.getElementById('customCrashVal').value=val;
+  await db.collection('settings').doc('game').set({ adminCrash:val },{ merge:true });
+  document.getElementById('crashStatus').textContent='⚡ '+val.toFixed(2)+'x set';
+  document.getElementById('crashStatus').style.color='var(--gold)';
+  showToast('Next round crash: '+val.toFixed(2)+'x','info');
+}
+
+async function setCrash(){
+  const val=parseFloat(document.getElementById('customCrashVal').value);
+  if(isNaN(val)||val<1.01){ showToast('Min 1.01x enter karo','lose'); return; }
+  await db.collection('settings').doc('game').set({ adminCrash:val },{ merge:true });
+  document.getElementById('crashStatus').textContent='⚡ '+val.toFixed(2)+'x set';
+  document.getElementById('crashStatus').style.color='var(--gold)';
+  showToast('Crash set: '+val.toFixed(2)+'x','info');
+}
+
+async function setAuto(){
+  await db.collection('settings').doc('game').set({ adminCrash:null },{ merge:true });
+  document.querySelectorAll('.preset').forEach(p=>p.classList.remove('sel'));
+  document.getElementById('customCrashVal').value='';
+  document.getElementById('crashStatus').textContent='🎲 AUTO';
+  document.getElementById('crashStatus').style.color='var(--muted)';
+  showToast('Auto mode on','info');
+}
+
+async function loadDeposits(){
+  const snap = await db.collection('transactions').where('type','==','deposit').orderBy('createdAt','desc').get();
+  const el = document.getElementById('depositList');
+  if(snap.empty){ el.innerHTML='<div style="text-align:center;color:var(--muted);font-size:12px;padding:15px;">No requests</div>'; return; }
+  el.innerHTML = snap.docs.map(d=>{
+    const t={id:d.id,...d.data()};
+    return `<div style="background:var(--s2);border-radius:9px;padding:10px 12px;margin-bottom:7px;border:1px solid #1a1a2e;">
+      <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+        <div><div style="font-size:13px;font-weight:600;">${t.email||t.user}</div><div style="font-size:10px;color:var(--muted);">${t.date} • UTR: ${t.utr||'N/A'}</div></div>
+        <div style="text-align:right;"><div style="font-family:'Orbitron',sans-serif;font-size:16px;color:var(--green);">+${t.amount}🪙</div><span class="badge b-${t.status}">${t.status.toUpperCase()}</span></div>
+      </div>
+      ${t.status==='pending'?`<div style="display:flex;gap:5px;"><button class="approve-btn" onclick="approveDeposit('${t.id}','${t.user}',${t.amount})">✓ APPROVE</button><button class="reject-btn" onclick="rejectTxn('${t.id}')">✗ REJECT</button></div>`:''}
+    </div>`;
+  }).join('');
+}
+
+async function approveDeposit(id, uid, amount){
+  await db.collection('transactions').doc(id).update({ status:'done' });
+  await db.collection('users').doc(uid).update({ coins: firebase.firestore.FieldValue.increment(amount) });
+  showToast('+'+amount+'🪙 added!','win');
+  loadAll();
+}
+
+async function rejectTxn(id){
+  const snap = await db.collection('transactions').doc(id).get();
+  const t = snap.data();
+  await db.collection('transactions').doc(id).update({ status:'rejected' });
+  if(t.type==='withdraw'){
+    await db.collection('users').doc(t.user).update({ coins: firebase.firestore.FieldValue.increment(t.amount) });
+  }
+  showToast('Request rejected','lose');
+  loadAll();
+}
+
+async function loadWithdrawals(){
+  const snap = await db.collection('transactions').where('type','==','withdraw').orderBy('createdAt','desc').get();
+  const el = document.getElementById('withdrawList');
+  if(snap.empty){ el.innerHTML='<div style="text-align:center;color:var(--muted);font-size:12px;padding:15px;">No requests</div>'; return; }
+  el.innerHTML = snap.docs.map(d=>{
+    const t={id:d.id,...d.data()};
+    return `<div style="background:var(--s2);border-radius:9px;padding:10px 12px;margin-bottom:7px;border:1px solid #1a1a2e;">
+      <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+        <div><div style="font-size:13px;font-weight:600;">${t.email||t.user}</div><div style="font-size:10px;color:var(--muted);">${t.date}</div><div style="font-size:11px;color:var(--blue);margin-top:2px;">UPI: ${t.upi||'N/A'} • ${t.name||''}</div></div>
+        <div style="text-align:right;"><div style="font-family:'Orbitron',sans-serif;font-size:16px;color:var(--orange);">-${t.amount}🪙</div><span class="badge b-${t.status}">${t.status.toUpperCase()}</span></div>
+      </div>
+      ${t.status==='pending'?`<div style="display:flex;gap:5px;"><button class="approve-btn" onclick="approveWithdraw('${t.id}')">✓ PAID</button><button class="reject-btn" onclick="rejectTxn('${t.id}')">✗ REJECT</button></div>`:''}
+    </div>`;
+  }).join('');
+}
+
+async function approveWithdraw(id){
+  await db.collection('transactions').doc(id).update({ status:'done' });
+  showToast('Withdrawal marked as paid!','win');
+  loadAll();
+}
+
+async function loadUsers(){
+  const snap = await db.collection('users').get();
+  const el = document.getElementById('usersList');
+  if(snap.empty){ el.innerHTML='<div style="text-align:center;color:var(--muted);font-size:12px;padding:15px;">No users</div>'; return; }
+  el.innerHTML = snap.docs.map(d=>{
+    const u=d.data();
+    return `<div style="display:flex;justify-content:space-between;align-items:center;background:var(--s2);border-radius:9px;padding:10px 12px;margin-bottom:6px;">
+      <div><div style="font-size:13px;font-weight:600;">${u.email}</div><div style="font-size:10px;color:var(--muted);">Ref: ${u.refCode} • Referrals: ${u.refCount||0}</div></div>
+      <div style="text-align:right;">
+        <div style="font-family:'Orbitron',sans-serif;font-size:14px;color:var(--gold);">${u.coins||0}🪙</div>
+        <div style="display:flex;gap:4px;margin-top:4px;">
+          <button style="padding:3px 8px;background:#00e67622;border:1px solid #00e67644;border-radius:5px;color:var(--green);font-size:10px;cursor:pointer;" onclick="addCoins('${u.uid}','${u.email}')">+COINS</button>
+          <button style="padding:3px 8px;background:#ff444422;border:1px solid #ff444444;border-radius:5px;color:var(--red);font-size:10px;cursor:pointer;" onclick="removeCoins('${u.uid}','${u.email}')">-COINS</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function addCoins(uid, email){
+  const amt = parseInt(prompt('Kitne coins add karne hain '+email+'?'));
+  if(!amt||amt<1) return;
+  await db.collection('users').doc(uid).update({ coins: firebase.firestore.FieldValue.increment(amt) });
+  showToast('+'+amt+' coins added!','win');
+  loadUsers();
+}
+
+async function removeCoins(uid, email){
+  const amt = parseInt(prompt('Kitne coins remove karne hain '+email+'?'));
+  if(!amt||amt<1) return;
+  await db.collection('users').doc(uid).update({ coins: firebase.firestore.FieldValue.increment(-amt) });
+  showToast('-'+amt+' coins removed!','lose');
+  loadUsers();
+}
+
+async function loadSettings(){
+  const snap = await db.collection('settings').doc('main').get();
+  if(snap.exists){
+    if(snap.data().upiId) document.getElementById('settingsUPI').value = snap.data().upiId;
+    if(snap.data().adminName) document.getElementById('settingsName').value = snap.data().adminName;
+  }
+  const gameSnap = await db.collection('settings').doc('game').get();
+  if(gameSnap.exists && gameSnap.data().adminCrash){
+    document.getElementById('crashStatus').textContent = '⚡ '+gameSnap.data().adminCrash.toFixed(2)+'x set';
+    document.getElementById('crashStatus').style.color = 'var(--gold)';
+  }
+}
+
+async function saveSettings(){
+  const upi = document.getElementById('settingsUPI').value.trim();
+  const name = document.getElementById('settingsName').value.trim();
+  if(!upi){ showToast('UPI ID enter karo','lose'); return; }
+  await db.collection('settings').doc('main').set({ upiId:upi, adminName:name },{ merge:true });
+  showToast('Settings saved!','win');
+}
+
+async function changePass(){
+  const np = document.getElementById('newPass').value;
+  if(!np||np.length<4){ showToast('Min 4 characters ka password','lose'); return; }
+  await db.collection('settings').doc('admin').set({ password:np },{ merge:true });
+  document.getElementById('newPass').value='';
+  showToast('Password changed!','win');
+}
+
+function showToast(msg,type='info'){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.className='toast '+type; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2500);
+}
+</script>
+</body>
+</html>
